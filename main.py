@@ -187,13 +187,32 @@ class SSSTabView(customtkinter.CTkTabview):
         # Past Games Analysis
         ##########################
 
-        # Move Drop Down / Option Menu
+        # Setting up the dictionaries
         self.past_move_dict = {
             "DTHROW": slippi.event.Attack.DOWN_THROW,
             "UTHROW": slippi.event.Attack.UP_THROW,
             "NEUTRAL_B": slippi.event.Attack.NEUTRAL_SPECIAL,
             "UTILT": slippi.event.Attack.UP_TILT
         }
+
+        self.move_frame_dict = {
+            # "FIX UTILT CoDE": self.utilt_frame_data,
+
+        }
+
+        self.utilt_frame_data = {
+            "FALCO": 23
+        }
+
+        self.uthrow_frame_data = {
+            "FALCO": 38
+        }
+
+        self.dthrow_frame_data = {
+            "FALCO": 43
+        }
+
+        # Move Drop Down / Option Menu
 
         self.past_move_optionmenu_var = customtkinter.StringVar(value="DTHROW")
         self.selected_move = self.past_move_dict[self.past_move_optionmenu_var.get()]
@@ -222,17 +241,25 @@ class SSSTabView(customtkinter.CTkTabview):
             return None
 
         def past_start_button_event():
-            game = Game("C:\\Users\\test\\Documents\\Slippi\\Game_20230403T225300.slp")
-            print(self.selected_move)
-            print(game.metadata)
             self.selected_move_count = 0
-            for frame in game.frames:
-                if frame.ports[1].leader.post.last_attack_landed == self.selected_move:
-                    self.selected_move_count = self.selected_move_count + 1
+            self.total_games_frames = 0
+            for filename in os.listdir(replays_directory):
+                f = os.path.join(replays_directory, filename)
+                if not os.path.isfile(f):
+                    break
+
+                print(f)
+                game = Game(f)
+                self.total_games_frames = self.total_games_frames + len(game.frames)
+                for frame in game.frames:
+                    # if frame.ports[1].leader.post.last_attack_landed != self          .last_used_move or (frame.index - self.selected_move_last_frame_used) > self.move_frame_dict[self.selected_move][frame.ports[1].leader.InGameCharacter]:
+                    if frame.ports[1].leader.post.last_attack_landed == self.selected_move:
+                        self.selected_move_count = self.selected_move_count + 1
+
             print("You spent {} frames with {} as your last hit move!".format(self.selected_move_count,
                                                                               get_key_from_value(self.past_move_dict,
                                                                                                  self.selected_move)))
-            self.move_percent = ((self.selected_move_count / (len(game.frames))) * 100)
+            self.move_percent = ((self.selected_move_count / self.total_games_frames) * 100)
             print("That was the last move you hit for %s%% of frames!" % round(self.move_percent, 2))
 
         self.past_start_button = customtkinter.CTkButton(master=self.tab("Past Games"),
