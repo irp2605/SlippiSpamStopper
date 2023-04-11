@@ -4,7 +4,6 @@ import tkinter
 import customtkinter
 import sys
 import logging
-from pygtail import Pygtail
 import config
 import slippi.event
 from watchdog.observers import Observer
@@ -53,8 +52,6 @@ class Watchdog(PatternMatchingEventHandler, Observer):
         config.myList.append(file_path)
         print("Exists? %s" % os.path.exists(file_path))
         print("Is file? %s" % os.path.isfile(file_path))
-        # ame(file_path)
-        # f = subprocess.Popen('tail -c+1 -f %s' % file_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         time.sleep(0.5)
         while True:
             time.sleep(0.5)
@@ -252,7 +249,9 @@ class SSSTabView(customtkinter.CTkTabview):
                 game = Game(f)
                 self.total_games_frames = self.total_games_frames + len(game.frames)
                 for frame in game.frames:
-                    # if frame.ports[1].leader.post.last_attack_landed != self          .last_used_move or (frame.index - self.selected_move_last_frame_used) > self.move_frame_dict[self.selected_move][frame.ports[1].leader.InGameCharacter]:
+                    # if frame.ports[1].leader.post.last_attack_landed != self.last_used_move or (frame.index -
+                    # self.selected_move_last_frame_used) > self.move_frame_dict[self.selected_move][frame.ports[
+                    # 1].leader.InGameCharacter]:
                     if frame.ports[1].leader.post.last_attack_landed == self.selected_move:
                         self.selected_move_count = self.selected_move_count + 1
 
