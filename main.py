@@ -184,6 +184,40 @@ class SSSTabView(customtkinter.CTkTabview):
         # Past Games Analysis
         ##########################
 
+        # Setting up other attack array
+        self.other_attacks_list = [
+            "ATTACK_11",
+            "ATTACK_12",
+            "ATTACK_13",
+            "ATTACK_100_START",
+            "ATTACK_100_LOOP",
+            "ATTACK_100_END",
+            "ATTACK_DASH",
+            "ATTACK_S_3_HI",
+            "ATTACK_S_3_HI_S",
+            "ATTACK_S_3_S",
+            "ATTACK_S_3_LW_S",
+            "ATTACK_S_3_LW",
+            "ATTACK_HI_3",
+            "ATTACK_LW_3",
+            "ATTACK_S_4_HI",
+            "ATTACK_S_4_HI_S",
+            "ATTACK_S_4_S",
+            "ATTACK_S_4_LW_S",
+            "ATTACK_S_4_LW",
+            "ATTACK_HI_4",
+            "ATTACK_LW_4",
+            "ATTACK_AIR_N",
+            "ATTACK_AIR_F",
+            "ATTACK_AIR_B",
+            "ATTACK_AIR_HI",
+            "ATTACK_AIR_LW",
+            "THROW_F",
+            "THROW_B",
+            "THROW_HI",
+            "THROW_LW"
+        ]
+
         # Setting up the dictionaries
         self.past_move_dict = {
             "DTHROW": slippi.event.Attack.DOWN_THROW,
@@ -209,8 +243,13 @@ class SSSTabView(customtkinter.CTkTabview):
             "FALCO": 43
         }
 
-        # Move Drop Down / Option Menu
+        # Calculation settings
+        self.past_calculation_setting_label = customtkinter.CTkLabel(text="Calculate based on:",
+                                                                     master=self.tab("Past Games"))
+        self.past_calculation_setting_label.place(x=150,
+                                                  y=95)
 
+        # Move Drop Down / Option Menu
         self.past_move_optionmenu_var = customtkinter.StringVar(value="DTHROW")
         self.selected_move = self.past_move_dict[self.past_move_optionmenu_var.get()]
 
@@ -248,12 +287,22 @@ class SSSTabView(customtkinter.CTkTabview):
                 print(f)
                 game = Game(f)
                 self.total_games_frames = self.total_games_frames + len(game.frames)
+                print(len(game.frames))
                 for frame in game.frames:
-                    # if frame.ports[1].leader.post.last_attack_landed != self.last_used_move or (frame.index -
-                    # self.selected_move_last_frame_used) > self.move_frame_dict[self.selected_move][frame.ports[
-                    # 1].leader.InGameCharacter]:
-                    if frame.ports[1].leader.post.last_attack_landed == self.selected_move:
-                        self.selected_move_count = self.selected_move_count + 1
+                    if frame.ports[1].leader.post.state == slippi.id.ActionState.ATTACK_HI_3:
+                        if frame.index == 0:
+                            print("triggered 0")
+                        elif frame.ports[1].leader.post.state != game.frames[frame.index-1].ports[1].leader.post.state:
+                            print("triggered other")
+                            print(frame.index)
+                            print(frame.ports[1].leader.post.state)
+                            print(game.frames[frame.index-1].ports[1].leader.post.state)
+                            self.selected_move_count = self.selected_move_count + 1
+                print("You used the selected move {} times".format(self.selected_move_count))
+
+                # if frame.ports[1].leader.post.last_attack_landed == self.selected_move:
+                # print(frame.ports[1].leader.post)
+                # self.selected_move_count = self.selected_move_count + 1
 
             print("You spent {} frames with {} as your last hit move!".format(self.selected_move_count,
                                                                               get_key_from_value(self.past_move_dict,
