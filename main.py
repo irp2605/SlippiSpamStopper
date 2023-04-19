@@ -12,7 +12,6 @@ from tkinter import filedialog
 from tkinter import messagebox
 from typing import Iterator
 import pip
-from PIL import Image, ImageTk
 import subprocess
 
 from slippi.parse import parse
@@ -289,14 +288,11 @@ class SSSTabView(customtkinter.CTkTabview):
                 self.total_games_frames = self.total_games_frames + len(game.frames)
                 print(len(game.frames))
                 for frame in game.frames:
-                    if frame.ports[1].leader.post.state == slippi.id.ActionState.ATTACK_HI_3:
-                        if frame.index == 0:
-                            print("triggered 0")
-                        elif frame.ports[1].leader.post.state != game.frames[frame.index-1].ports[1].leader.post.state:
+                    # print("found frame {} to contain state {} in age {}".format(frame.index, frame.ports[1].leader.post.state, frame.ports[1].leader.post.state_age))
+                    if frame.ports[0].leader.post.state == slippi.id.ActionState.ATTACK_HI_3:
+                        if frame.ports[0].leader.post.state_age==1.0:
                             print("triggered other")
                             print(frame.index)
-                            print(frame.ports[1].leader.post.state)
-                            print(game.frames[frame.index-1].ports[1].leader.post.state)
                             self.selected_move_count = self.selected_move_count + 1
                 print("You used the selected move {} times".format(self.selected_move_count))
 
