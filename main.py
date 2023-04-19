@@ -185,68 +185,63 @@ class SSSTabView(customtkinter.CTkTabview):
 
         # Setting up other attack array
         self.other_attacks_list = [
-            "ATTACK_11",
-            "ATTACK_12",
-            "ATTACK_13",
-            "ATTACK_100_START",
-            "ATTACK_100_LOOP",
-            "ATTACK_100_END",
-            "ATTACK_DASH",
-            "ATTACK_S_3_HI",
-            "ATTACK_S_3_HI_S",
-            "ATTACK_S_3_S",
-            "ATTACK_S_3_LW_S",
-            "ATTACK_S_3_LW",
-            "ATTACK_HI_3",
-            "ATTACK_LW_3",
-            "ATTACK_S_4_HI",
-            "ATTACK_S_4_HI_S",
-            "ATTACK_S_4_S",
-            "ATTACK_S_4_LW_S",
-            "ATTACK_S_4_LW",
-            "ATTACK_HI_4",
-            "ATTACK_LW_4",
-            "ATTACK_AIR_N",
-            "ATTACK_AIR_F",
-            "ATTACK_AIR_B",
-            "ATTACK_AIR_HI",
-            "ATTACK_AIR_LW",
-            "THROW_F",
-            "THROW_B",
-            "THROW_HI",
-            "THROW_LW"
+            slippi.id.ActionState.ATTACK_11,
+            slippi.id.ActionState.ATTACK_12,
+            slippi.id.ActionState.ATTACK_13,
+            slippi.id.ActionState.ATTACK_100_START,
+            slippi.id.ActionState.ATTACK_DASH,
+            slippi.id.ActionState.ATTACK_S_3_HI,
+            slippi.id.ActionState.ATTACK_S_3_HI_S,
+            slippi.id.ActionState.ATTACK_S_3_S,
+            slippi.id.ActionState.ATTACK_S_3_LW_S,
+            slippi.id.ActionState.ATTACK_S_3_LW,
+            slippi.id.ActionState.ATTACK_HI_3,
+            slippi.id.ActionState.ATTACK_LW_3,
+            slippi.id.ActionState.ATTACK_S_4_HI,
+            slippi.id.ActionState.ATTACK_S_4_HI_S,
+            slippi.id.ActionState.ATTACK_S_4_S,
+            slippi.id.ActionState.ATTACK_S_4_LW_S,
+            slippi.id.ActionState.ATTACK_S_4_LW,
+            slippi.id.ActionState.ATTACK_HI_4,
+            slippi.id.ActionState.ATTACK_LW_4,
+            slippi.id.ActionState.ATTACK_AIR_N,
+            slippi.id.ActionState.ATTACK_AIR_F,
+            slippi.id.ActionState.ATTACK_AIR_B,
+            slippi.id.ActionState.ATTACK_AIR_HI,
+            slippi.id.ActionState.ATTACK_AIR_LW,
+            slippi.id.ActionState.THROW_F,
+            slippi.id.ActionState.THROW_B,
+            slippi.id.ActionState.THROW_HI,
+            slippi.id.ActionState.THROW_LW
         ]
 
         # Setting up the dictionaries
         self.past_move_dict = {
-            "DTHROW": slippi.event.Attack.DOWN_THROW,
-            "UTHROW": slippi.event.Attack.UP_THROW,
+            "DTHROW": slippi.id.ActionState.THROW_LW,
+            "UTHROW": slippi.id.ActionState.THROW_HI,
             "NEUTRAL_B": slippi.event.Attack.NEUTRAL_SPECIAL,
-            "UTILT": slippi.event.Attack.UP_TILT
-        }
-
-        self.move_frame_dict = {
-            # "FIX UTILT CoDE": self.utilt_frame_data,
-
-        }
-
-        self.utilt_frame_data = {
-            "FALCO": 23
-        }
-
-        self.uthrow_frame_data = {
-            "FALCO": 38
-        }
-
-        self.dthrow_frame_data = {
-            "FALCO": 43
+            "UTILT": slippi.id.ActionState.ATTACK_HI_3
         }
 
         # Calculation settings
         self.past_calculation_setting_label = customtkinter.CTkLabel(text="Calculate based on:",
                                                                      master=self.tab("Past Games"))
-        self.past_calculation_setting_label.place(x=150,
-                                                  y=95)
+        self.past_calculation_setting_label.place(x=130,
+                                                  y=145)
+        # Calculation option menu
+        self.past_calculation_setting_optionmenu_var = customtkinter.StringVar(value="Moves")
+        self.selected_calculation_setting = self.past_calculation_setting_optionmenu_var.get()
+
+        def past_calculation_setting_optionmenu_callback(choice):
+            print("calculation setting selected: ", choice)
+            self.selected_calculation_setting = self.past_calculation_setting_optionmenu_var
+
+        self.past_calculation_setting_optionmenu = customtkinter.CTkOptionMenu(master=self.tab("Past Games"),
+                                                                               values=["Moves", "Frames"],
+                                                                               command=past_calculation_setting_optionmenu_callback,
+                                                                               variable=self.past_calculation_setting_optionmenu_var)
+        self.past_calculation_setting_optionmenu.place(x=120,
+                                                       y=180)
 
         # Move Drop Down / Option Menu
         self.past_move_optionmenu_var = customtkinter.StringVar(value="DTHROW")
@@ -278,6 +273,7 @@ class SSSTabView(customtkinter.CTkTabview):
         def past_start_button_event():
             self.selected_move_count = 0
             self.total_games_frames = 0
+            self.total_attacks_used = 0
             for filename in os.listdir(replays_directory):
                 f = os.path.join(replays_directory, filename)
                 if not os.path.isfile(f):
@@ -286,25 +282,29 @@ class SSSTabView(customtkinter.CTkTabview):
                 print(f)
                 game = Game(f)
                 self.total_games_frames = self.total_games_frames + len(game.frames)
-                print(len(game.frames))
                 for frame in game.frames:
-                    # print("found frame {} to contain state {} in age {}".format(frame.index, frame.ports[1].leader.post.state, frame.ports[1].leader.post.state_age))
-                    if frame.ports[0].leader.post.state == slippi.id.ActionState.ATTACK_HI_3:
-                        if frame.ports[0].leader.post.state_age==1.0:
-                            print("triggered other")
-                            print(frame.index)
+                    if self.selected_calculation_setting == "Moves":
+                        # print("found frame {} to contain state {} in age {}".format(frame.index, frame.ports[1].leader.post.state, frame.ports[1].leader.post.state_age))
+                        if frame.ports[0].leader.post.state == self.selected_move:
+                            if frame.ports[0].leader.post.state_age == 1.0:
+                                self.selected_move_count = self.selected_move_count + 1
+                                self.total_attacks_used = self.total_attacks_used + 1
+                        elif frame.ports[0].leader.post.state in self.other_attacks_list and frame.ports[0].leader.post.state_age == 1.0:
+                            self.total_attacks_used = self.total_attacks_used + 1
+                    else:
+                        if frame.ports[1].leader.post.last_attack_landed == self.selected_move:
                             self.selected_move_count = self.selected_move_count + 1
-                print("You used the selected move {} times".format(self.selected_move_count))
 
-                # if frame.ports[1].leader.post.last_attack_landed == self.selected_move:
-                # print(frame.ports[1].leader.post)
-                # self.selected_move_count = self.selected_move_count + 1
-
-            print("You spent {} frames with {} as your last hit move!".format(self.selected_move_count,
+            if self.selected_calculation_setting == "Moves":
+                print("You used {} {} times out of {} attacks!".format(get_key_from_value(self.past_move_dict, self.selected_move), self.selected_move_count, self.total_attacks_used))
+                self.move_percent = ((self.selected_move_count / self.total_attacks_used) * 100)
+                print("You used that move for %s%% of attacks!" % round(self.move_percent, 2))
+            else:
+                print("You spent {} frames with {} as your last hit move!".format(self.selected_move_count,
                                                                               get_key_from_value(self.past_move_dict,
                                                                                                  self.selected_move)))
-            self.move_percent = ((self.selected_move_count / self.total_games_frames) * 100)
-            print("That was the last move you hit for %s%% of frames!" % round(self.move_percent, 2))
+                self.move_percent = ((self.selected_move_count / self.total_games_frames) * 100)
+                print("That was the last move you hit for %s%% of frames!" % round(self.move_percent, 2))
 
         self.past_start_button = customtkinter.CTkButton(master=self.tab("Past Games"),
                                                          command=lambda: past_start_button_event(),
