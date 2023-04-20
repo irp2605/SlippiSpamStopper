@@ -13,6 +13,7 @@ from tkinter import messagebox
 from typing import Iterator
 import pip
 import subprocess
+import melee
 
 from slippi.parse import parse
 from slippi.parse import ParseEvent
@@ -44,18 +45,14 @@ class Watchdog(PatternMatchingEventHandler, Observer):
         handlers = {ParseEvent.METADATA: print}
         file_path = event.src_path
         file_path = file_path.replace("/", "\\")
-        file_path = file_path.replace("\\", "\\\\")
+        # file_path = file_path.replace("\\", "\\\\")
         print("right before the subprocess")
         print(file_path)
         config.init()
         config.myList.append(file_path)
         print("Exists? %s" % os.path.exists(file_path))
         print("Is file? %s" % os.path.isfile(file_path))
-        time.sleep(0.5)
-        while True:
-            time.sleep(0.5)
-            with open(file_path, "rb") as f:
-                parse(f, handlers=handlers)
+
 
 
 class LiveStartedToplevelWindow(customtkinter.CTkToplevel):
@@ -67,11 +64,48 @@ class LiveStartedToplevelWindow(customtkinter.CTkToplevel):
         self.geometry("300x300")
         self.resizable(False, False)
         self.title("SlippiSpamStopper Live Game")
-        # self.iconphoto(r"rescources/images/SlippiSpamStopperPNGIcon.ico")
-        self.watchdog = None
-        self.watch_path = replays_directory
 
-        self.start_watchdog()
+        # lib melee first test
+        console = melee.Console(path="C:\\Users\\test\\AppData\\Roaming\\Slippi Launcher\\netplay")
+
+        #controllers setup
+        controller_player = melee.Controller(console=console,
+                                             port=1,
+                                             type=melee.ControllerType.GCN_ADAPTER)
+
+        controller_opponent = melee.Controller(console=console,
+                                             port=2,
+                                             type=melee.ControllerType.GCN_ADAPTER)
+
+        console.run("C:\\Users\\test\\Downloads\\gc\\SSBMv102.iso")
+
+        # Connect to the console
+        print("Connecting to console...")
+        if not console.connect():
+            print("ERROR: Failed to connect to the console.")
+            sys.exit(-1)
+        print("Console connected")
+
+        print("Connecting controller to console...")
+        if not controller_player.connect():
+            print("ERROR: Failed to connect the controller.")
+            sys.exit(-1)
+        print("Controller connected")
+
+        while True:
+            gamestate = console.step()
+            # step() returns None when the file ends
+            if gamestate is None:
+                continue
+            if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
+                print(gamestate.players[1])
+
+
+        # self.iconphoto(r"rescources/images/SlippiSpamStopperPNGIcon.ico")
+        # self.watchdog = None
+        # self.watch_path = replays_directory
+
+        # self.start_watchdog()
 
         watchdog_label = customtkinter.CTkLabel(text="Waiting for file creation", master=self)
         watchdog_label.place(x=10, y=150)
@@ -174,6 +208,7 @@ class SSSTabView(customtkinter.CTkTabview):
         self.live_started_toplevel_window = None
 
         def live_started():
+
             if self.live_started_toplevel_window is None or not self.live_started_toplevel_window.winfo_exists():
                 self.live_started_toplevel_window = LiveStartedToplevelWindow(self.winfo_toplevel())
                 self.live_started_toplevel_window.grab_set()
@@ -289,20 +324,24 @@ class SSSTabView(customtkinter.CTkTabview):
                             if frame.ports[0].leader.post.state_age == 1.0:
                                 self.selected_move_count = self.selected_move_count + 1
                                 self.total_attacks_used = self.total_attacks_used + 1
-                        elif frame.ports[0].leader.post.state in self.other_attacks_list and frame.ports[0].leader.post.state_age == 1.0:
+                        elif frame.ports[0].leader.post.state in self.other_attacks_list and frame.ports[
+                            0].leader.post.state_age == 1.0:
                             self.total_attacks_used = self.total_attacks_used + 1
                     else:
                         if frame.ports[1].leader.post.last_attack_landed == self.selected_move:
                             self.selected_move_count = self.selected_move_count + 1
 
             if self.selected_calculation_setting == "Moves":
-                print("You used {} {} times out of {} attacks!".format(get_key_from_value(self.past_move_dict, self.selected_move), self.selected_move_count, self.total_attacks_used))
+                print("You used {} {} times out of {} attacks!".format(
+                    get_key_from_value(self.past_move_dict, self.selected_move), self.selected_move_count,
+                    self.total_attacks_used))
                 self.move_percent = ((self.selected_move_count / self.total_attacks_used) * 100)
                 print("You used that move for %s%% of attacks!" % round(self.move_percent, 2))
             else:
                 print("You spent {} frames with {} as your last hit move!".format(self.selected_move_count,
-                                                                              get_key_from_value(self.past_move_dict,
-                                                                                                 self.selected_move)))
+                                                                                  get_key_from_value(
+                                                                                      self.past_move_dict,
+                                                                                      self.selected_move)))
                 self.move_percent = ((self.selected_move_count / self.total_games_frames) * 100)
                 print("That was the last move you hit for %s%% of frames!" % round(self.move_percent, 2))
 
