@@ -14,6 +14,7 @@ from typing import Iterator
 import pip
 import subprocess
 import melee
+from playsound import playsound
 
 from slippi.parse import parse
 from slippi.parse import ParseEvent
@@ -25,6 +26,11 @@ customtkinter.set_default_color_theme("blue")
 global replays_directory
 global watchdog_label
 global handlers
+
+# Live replay reaction globals
+global live_selected_move
+global max_consecutive_selected_move_uses
+global live_response
 
 
 class Watchdog(PatternMatchingEventHandler, Observer):
@@ -66,6 +72,16 @@ class LiveStartedToplevelWindow(customtkinter.CTkToplevel):
         self.title("SlippiSpamStopper Live Game")
 
         # lib melee first test
+
+        # setting up lib melee dict
+        self.live_move_dict = {
+            "DTHROW": melee.enums.Action.THROW_DOWN,
+            "UTHROW": melee.enums.Action.THROW_UP,
+            "NEUTRAL_B": melee.enums.Action.NEUTRAL_B_ATTACKING,
+            "UTILT": melee.enums.Action.UPTILT
+        }
+
+        #console creation
         console = melee.Console(path="C:\\Users\\test\\AppData\\Roaming\\Slippi Launcher\\netplay")
 
         #controllers setup
@@ -77,6 +93,7 @@ class LiveStartedToplevelWindow(customtkinter.CTkToplevel):
                                              port=2,
                                              type=melee.ControllerType.GCN_ADAPTER)
 
+        #running the console / opening dolphin
         console.run("C:\\Users\\test\\Downloads\\gc\\SSBMv102.iso")
 
         # Connect to the console
@@ -92,6 +109,9 @@ class LiveStartedToplevelWindow(customtkinter.CTkToplevel):
             sys.exit(-1)
         print("Controller connected")
 
+        # gameplay movechecking loop
+        global live_selected_move
+        self.selected_move_consecutive_use_count = 0
         while True:
             gamestate = console.step()
             # step() returns None when the file ends
@@ -99,6 +119,20 @@ class LiveStartedToplevelWindow(customtkinter.CTkToplevel):
                 continue
             if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
                 print(gamestate.players[1])
+
+                if gamestate.players[1].action_frame == 1:
+                    if gamestate.players[1].action == self.live_move_dict.get(live_selected_move):
+                        self.selected_move_consecutive_use_count += 1
+                    else:
+                        self.selected_move_consecutive_use_count = 0
+
+                if self.selected_move_consecutive_use_count == max_consecutive_selected_move_uses:
+                    if(live_response == "Sound"):
+                        print("sound")
+
+
+
+
 
 
         # self.iconphoto(r"rescources/images/SlippiSpamStopperPNGIcon.ico")
@@ -144,7 +178,9 @@ class SSSTabView(customtkinter.CTkTabview):
         self.move_optionmenu_var = customtkinter.StringVar(value="DTHROW")
 
         def move_optionmenu_callback(choice):
+            global live_selected_move
             print("move selected: ", choice)
+            live_selected_move = choice
 
         self.move_combobox = customtkinter.CTkOptionMenu(master=self.tab("Live Game"),
                                                          values=["DTHROW", "UTHROW", "NEUTRAL_B", "UTILT"],
@@ -156,7 +192,9 @@ class SSSTabView(customtkinter.CTkTabview):
         # Number times entry
 
         def validate_times_entry(new_value):
+            global max_consecutive_selected_move_uses
             if new_value == "" or new_value.isnumeric():
+                max_consecutive_selected_move_uses = new_value
                 return True
             else:
                 return False
@@ -180,7 +218,9 @@ class SSSTabView(customtkinter.CTkTabview):
         self.response_optionmenu_var = customtkinter.StringVar(value="Playing a Sound")
 
         def response_optionmenu_callback(choice):
+            global live_response
             print("move selected: ", choice)
+            live_response = choice
 
         self.response_combobox = customtkinter.CTkOptionMenu(master=self.tab("Live Game"),
                                                              values=["Playing a Sound", "Using PySerial"],
