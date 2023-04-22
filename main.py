@@ -118,15 +118,15 @@ class LiveStartedToplevelWindow(customtkinter.CTkToplevel):
             if gamestate is None:
                 continue
             if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
-                print(gamestate.players[1])
-
                 if gamestate.players[1].action_frame == 1:
                     if gamestate.players[1].action == self.live_move_dict.get(live_selected_move):
+                        print("adding to selected move count")
                         self.selected_move_consecutive_use_count += 1
                     else:
                         self.selected_move_consecutive_use_count = 0
 
                 if self.selected_move_consecutive_use_count == max_consecutive_selected_move_uses:
+                    print("max move consecutive use triggered")
                     if(live_response == "Sound"):
                         print("sound")
 
