@@ -14,7 +14,7 @@ from typing import Iterator
 import pip
 import subprocess
 import melee
-from playsound import playsound
+# from playsound import playsound
 
 from slippi.parse import parse
 from slippi.parse import ParseEvent
@@ -60,7 +60,6 @@ class Watchdog(PatternMatchingEventHandler, Observer):
         print("Is file? %s" % os.path.isfile(file_path))
 
 
-
 class LiveStartedToplevelWindow(customtkinter.CTkToplevel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -81,20 +80,100 @@ class LiveStartedToplevelWindow(customtkinter.CTkToplevel):
             "UTILT": melee.enums.Action.UPTILT
         }
 
-        #console creation
-        console = melee.Console(path="C:\\Users\\test\\AppData\\Roaming\\Slippi Launcher\\netplay")
+        # setting up array of all attacks to know when to reset attack count
+        self.live_attack_list = [
+            melee.enums.Action.BAIR,
+            melee.enums.Action.DAIR,
+            melee.enums.Action.DASH_ATTACK,
+            melee.enums.Action.DOWNSMASH,
+            melee.enums.Action.DOWNTILT,
+            melee.enums.Action.DOWN_B_AIR,
+            melee.enums.Action.DOWN_B_GROUND,
+            melee.enums.Action.DOWN_B_GROUND_START,
+            melee.enums.Action.DK_GROUND_POUND,
+            melee.enums.Action.FAIR,
+            melee.enums.Action.FIREFOX_AIR,
+            melee.enums.Action.FIREFOX_GROUND,
+            melee.enums.Action.FIREFOX_WAIT_AIR,
+            melee.enums.Action.FIREFOX_WAIT_GROUND,
+            melee.enums.Action.FOX_ILLUSION,
+            melee.enums.Action.FOX_ILLUSION_SHORTENED,
+            melee.enums.Action.FOX_ILLUSION_START,
+            melee.enums.Action.FSMASH_HIGH,
+            melee.enums.Action.FSMASH_LOW,
+            melee.enums.Action.FSMASH_MID,
+            melee.enums.Action.FSMASH_MID_HIGH,
+            melee.enums.Action.FSMASH_MID_LOW,
+            melee.enums.Action.FTILT_HIGH,
+            melee.enums.Action.FTILT_HIGH_MID,
+            melee.enums.Action.FTILT_LOW,
+            melee.enums.Action.FTILT_LOW_MID,
+            melee.enums.Action.FTILT_MID,
+            melee.enums.Action.GRAB,
+            melee.enums.Action.GUN_SHOOT,
+            melee.enums.Action.GUN_SHOOT_AIR,
+            melee.enums.Action.LASER_GUN_PULL,
+            melee.enums.Action.LOOPING_ATTACK_START,
+            melee.enums.Action.LOOPING_ATTACK_MIDDLE,
+            melee.enums.Action.MARTH_COUNTER,
+            melee.enums.Action.MARTH_COUNTER_FALLING,
+            melee.enums.Action.NAIR,
+            melee.enums.Action.NESS_SHEILD,
+            melee.enums.Action.NESS_SHEILD_AIR,
+            melee.enums.Action.NESS_SHEILD_START,
+            melee.enums.Action.NEUTRAL_ATTACK_1,
+            melee.enums.Action.NEUTRAL_ATTACK_2,
+            melee.enums.Action.NEUTRAL_ATTACK_3,
+            melee.enums.Action.NEUTRAL_B_ATTACKING,
+            melee.enums.Action.NEUTRAL_B_ATTACKING_AIR,
+            melee.enums.Action.NEUTRAL_B_CHARGING,
+            melee.enums.Action.NEUTRAL_B_CHARGING_AIR,
+            melee.enums.Action.NEUTRAL_B_FULL_CHARGE,
+            melee.enums.Action.NEUTRAL_B_FULL_CHARGE_AIR,
+            melee.enums.Action.SWORD_DANCE_1,
+            melee.enums.Action.SWORD_DANCE_1_AIR,
+            melee.enums.Action.SWORD_DANCE_2_HIGH,
+            melee.enums.Action.SWORD_DANCE_2_HIGH_AIR,
+            melee.enums.Action.SWORD_DANCE_2_MID,
+            melee.enums.Action.SWORD_DANCE_2_MID_AIR,
+            melee.enums.Action.SWORD_DANCE_3_HIGH,
+            melee.enums.Action.SWORD_DANCE_3_HIGH_AIR,
+            melee.enums.Action.SWORD_DANCE_3_LOW,
+            melee.enums.Action.SWORD_DANCE_3_LOW_AIR,
+            melee.enums.Action.SWORD_DANCE_3_MID,
+            melee.enums.Action.SWORD_DANCE_3_MID_AIR,
+            melee.enums.Action.SWORD_DANCE_4_HIGH,
+            melee.enums.Action.SWORD_DANCE_4_HIGH_AIR,
+            melee.enums.Action.SWORD_DANCE_4_LOW,
+            melee.enums.Action.SWORD_DANCE_4_LOW_AIR,
+            melee.enums.Action.SWORD_DANCE_4_MID,
+            melee.enums.Action.SWORD_DANCE_4_MID_AIR,
+            melee.enums.Action.THROW_BACK,
+            melee.enums.Action.THROW_DOWN,
+            melee.enums.Action.THROW_FORWARD,
+            melee.enums.Action.THROW_UP,
+            melee.enums.Action.UAIR,
+            melee.enums.Action.UPSMASH,
+            melee.enums.Action.UPTILT,
+            melee.enums.Action.UP_B_AIR,
+            melee.enums.Action.UP_B_GROUND
+        ]
 
-        #controllers setup
+        # console creation
+        console = melee.Console(path="C:\\Users\\irp26\\AppData\\Roaming\\Slippi Launcher\\netplay",
+                                logger=None)
+
+        # controllers setup
         controller_player = melee.Controller(console=console,
                                              port=1,
                                              type=melee.ControllerType.GCN_ADAPTER)
 
         controller_opponent = melee.Controller(console=console,
-                                             port=2,
-                                             type=melee.ControllerType.GCN_ADAPTER)
+                                               port=2,
+                                               type=melee.ControllerType.GCN_ADAPTER)
 
-        #running the console / opening dolphin
-        console.run("C:\\Users\\test\\Downloads\\gc\\SSBMv102.iso")
+        # running the console / opening dolphin
+        console.run("D:\\Game Downloads\\Roms\\GC\\asdf\\SSBMv102.iso")
 
         # Connect to the console
         print("Connecting to console...")
@@ -112,27 +191,37 @@ class LiveStartedToplevelWindow(customtkinter.CTkToplevel):
         # gameplay movechecking loop
         global live_selected_move
         self.selected_move_consecutive_use_count = 0
+
         while True:
             gamestate = console.step()
             # step() returns None when the file ends
             if gamestate is None:
                 continue
             if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
-                if gamestate.players[1].action_frame == 1:
-                    if gamestate.players[1].action == self.live_move_dict.get(live_selected_move):
+                discoveredPort = 1
+                discoveredPort = melee.port_detector(gamestate, melee.Character.FALCO, 0)
+                if gamestate.players[discoveredPort].action_frame == 1:
+                    if gamestate.players[discoveredPort].action == self.live_move_dict.get(live_selected_move):
                         print("adding to selected move count")
                         self.selected_move_consecutive_use_count += 1
+                        print(self.selected_move_consecutive_use_count)
                     else:
-                        self.selected_move_consecutive_use_count = 0
+                        if (gamestate.players[discoveredPort].action in self.live_attack_list):
+                            if(self.live_move_dict.get(live_selected_move) == melee.enums.Action.THROW_DOWN or self.live_move_dict.get(live_selected_move) == melee.enums.Action.THROW_UP):
+                                if(gamestate.players[discoveredPort].action == melee.enums.Action.GRAB):
+                                    pass
+                                else:
+                                    print("reset")
+                                    self.selected_move_consecutive_use_count = 0
+                            else:
+                                print("reset")
+                                self.selected_move_consecutive_use_count = 0
 
-                if self.selected_move_consecutive_use_count == max_consecutive_selected_move_uses:
+                if self.selected_move_consecutive_use_count >= int(max_consecutive_selected_move_uses):
                     print("max move consecutive use triggered")
-                    if(live_response == "Sound"):
-                        print("sound")
-
-
-
-
+                    self.selected_move_consecutive_use_count = 0
+                    # if (live_response == "Sound"):
+                        # print("sound")
 
 
         # self.iconphoto(r"rescources/images/SlippiSpamStopperPNGIcon.ico")
