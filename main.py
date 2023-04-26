@@ -6,13 +6,9 @@ import sys
 import logging
 import config
 import slippi.event
-from watchdog.observers import Observer
-from watchdog.events import LoggingEventHandler, FileSystemEventHandler, PatternMatchingEventHandler
 from tkinter import filedialog
 from tkinter import messagebox
-from typing import Iterator
 import pip
-import subprocess
 import melee
 # from playsound import playsound
 
@@ -23,225 +19,13 @@ from slippi.game import Game
 customtkinter.set_appearance_mode("dark")
 customtkinter.set_default_color_theme("blue")
 
+# Past replay analysis globals
 global replays_directory
-global watchdog_label
-global handlers
 
 # Live replay reaction globals
 global live_selected_move
 global max_consecutive_selected_move_uses
 global live_response
-
-
-class Watchdog(PatternMatchingEventHandler, Observer):
-    def __init__(self, path='.', patterns='*', logfunc=print):
-        PatternMatchingEventHandler.__init__(self, patterns)
-        Observer.__init__(self)
-        self.schedule(self, path=path, recursive=False)
-        self.log = logfunc
-
-    def on_created(self, event):
-        global watchdog_label
-        global handlers
-        self.log(f"hey, {event.src_path} has been created!")
-        if watchdog_label is None:
-            print("no label")
-        else:
-            watchdog_label.configure(text=event.src_path)
-        handlers = {ParseEvent.METADATA: print}
-        file_path = event.src_path
-        file_path = file_path.replace("/", "\\")
-        # file_path = file_path.replace("\\", "\\\\")
-        print("right before the subprocess")
-        print(file_path)
-        config.init()
-        config.myList.append(file_path)
-        print("Exists? %s" % os.path.exists(file_path))
-        print("Is file? %s" % os.path.isfile(file_path))
-
-
-class LiveStartedToplevelWindow(customtkinter.CTkToplevel):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        global watchdog_label
-
-        self.geometry("300x300")
-        self.resizable(False, False)
-        self.title("SlippiSpamStopper Live Game")
-
-        # lib melee first test
-
-        # setting up lib melee dict
-        self.live_move_dict = {
-            "DTHROW": melee.enums.Action.THROW_DOWN,
-            "UTHROW": melee.enums.Action.THROW_UP,
-            "NEUTRAL_B": melee.enums.Action.NEUTRAL_B_ATTACKING,
-            "UTILT": melee.enums.Action.UPTILT
-        }
-
-        # setting up array of all attacks to know when to reset attack count
-        self.live_attack_list = [
-            melee.enums.Action.BAIR,
-            melee.enums.Action.DAIR,
-            melee.enums.Action.DASH_ATTACK,
-            melee.enums.Action.DOWNSMASH,
-            melee.enums.Action.DOWNTILT,
-            melee.enums.Action.DOWN_B_AIR,
-            melee.enums.Action.DOWN_B_GROUND,
-            melee.enums.Action.DOWN_B_GROUND_START,
-            melee.enums.Action.DK_GROUND_POUND,
-            melee.enums.Action.FAIR,
-            melee.enums.Action.FIREFOX_AIR,
-            melee.enums.Action.FIREFOX_GROUND,
-            melee.enums.Action.FIREFOX_WAIT_AIR,
-            melee.enums.Action.FIREFOX_WAIT_GROUND,
-            melee.enums.Action.FOX_ILLUSION,
-            melee.enums.Action.FOX_ILLUSION_SHORTENED,
-            melee.enums.Action.FOX_ILLUSION_START,
-            melee.enums.Action.FSMASH_HIGH,
-            melee.enums.Action.FSMASH_LOW,
-            melee.enums.Action.FSMASH_MID,
-            melee.enums.Action.FSMASH_MID_HIGH,
-            melee.enums.Action.FSMASH_MID_LOW,
-            melee.enums.Action.FTILT_HIGH,
-            melee.enums.Action.FTILT_HIGH_MID,
-            melee.enums.Action.FTILT_LOW,
-            melee.enums.Action.FTILT_LOW_MID,
-            melee.enums.Action.FTILT_MID,
-            melee.enums.Action.GRAB,
-            melee.enums.Action.GUN_SHOOT,
-            melee.enums.Action.GUN_SHOOT_AIR,
-            melee.enums.Action.LASER_GUN_PULL,
-            melee.enums.Action.LOOPING_ATTACK_START,
-            melee.enums.Action.LOOPING_ATTACK_MIDDLE,
-            melee.enums.Action.MARTH_COUNTER,
-            melee.enums.Action.MARTH_COUNTER_FALLING,
-            melee.enums.Action.NAIR,
-            melee.enums.Action.NESS_SHEILD,
-            melee.enums.Action.NESS_SHEILD_AIR,
-            melee.enums.Action.NESS_SHEILD_START,
-            melee.enums.Action.NEUTRAL_ATTACK_1,
-            melee.enums.Action.NEUTRAL_ATTACK_2,
-            melee.enums.Action.NEUTRAL_ATTACK_3,
-            melee.enums.Action.NEUTRAL_B_ATTACKING,
-            melee.enums.Action.NEUTRAL_B_ATTACKING_AIR,
-            melee.enums.Action.NEUTRAL_B_CHARGING,
-            melee.enums.Action.NEUTRAL_B_CHARGING_AIR,
-            melee.enums.Action.NEUTRAL_B_FULL_CHARGE,
-            melee.enums.Action.NEUTRAL_B_FULL_CHARGE_AIR,
-            melee.enums.Action.SWORD_DANCE_1,
-            melee.enums.Action.SWORD_DANCE_1_AIR,
-            melee.enums.Action.SWORD_DANCE_2_HIGH,
-            melee.enums.Action.SWORD_DANCE_2_HIGH_AIR,
-            melee.enums.Action.SWORD_DANCE_2_MID,
-            melee.enums.Action.SWORD_DANCE_2_MID_AIR,
-            melee.enums.Action.SWORD_DANCE_3_HIGH,
-            melee.enums.Action.SWORD_DANCE_3_HIGH_AIR,
-            melee.enums.Action.SWORD_DANCE_3_LOW,
-            melee.enums.Action.SWORD_DANCE_3_LOW_AIR,
-            melee.enums.Action.SWORD_DANCE_3_MID,
-            melee.enums.Action.SWORD_DANCE_3_MID_AIR,
-            melee.enums.Action.SWORD_DANCE_4_HIGH,
-            melee.enums.Action.SWORD_DANCE_4_HIGH_AIR,
-            melee.enums.Action.SWORD_DANCE_4_LOW,
-            melee.enums.Action.SWORD_DANCE_4_LOW_AIR,
-            melee.enums.Action.SWORD_DANCE_4_MID,
-            melee.enums.Action.SWORD_DANCE_4_MID_AIR,
-            melee.enums.Action.THROW_BACK,
-            melee.enums.Action.THROW_DOWN,
-            melee.enums.Action.THROW_FORWARD,
-            melee.enums.Action.THROW_UP,
-            melee.enums.Action.UAIR,
-            melee.enums.Action.UPSMASH,
-            melee.enums.Action.UPTILT,
-            melee.enums.Action.UP_B_AIR,
-            melee.enums.Action.UP_B_GROUND
-        ]
-
-        # console creation
-        console = melee.Console(path="C:\\Users\\irp26\\AppData\\Roaming\\Slippi Launcher\\netplay",
-                                logger=None)
-
-        # controllers setup
-        controller_player = melee.Controller(console=console,
-                                             port=1,
-                                             type=melee.ControllerType.GCN_ADAPTER)
-
-        controller_opponent = melee.Controller(console=console,
-                                               port=2,
-                                               type=melee.ControllerType.GCN_ADAPTER)
-
-        # running the console / opening dolphin
-        console.run("D:\\Game Downloads\\Roms\\GC\\asdf\\SSBMv102.iso")
-
-        # Connect to the console
-        print("Connecting to console...")
-        if not console.connect():
-            print("ERROR: Failed to connect to the console.")
-            sys.exit(-1)
-        print("Console connected")
-
-        print("Connecting controller to console...")
-        if not controller_player.connect():
-            print("ERROR: Failed to connect the controller.")
-            sys.exit(-1)
-        print("Controller connected")
-
-        # gameplay movechecking loop
-        global live_selected_move
-        self.selected_move_consecutive_use_count = 0
-
-        while True:
-            gamestate = console.step()
-            # step() returns None when the file ends
-            if gamestate is None:
-                continue
-            if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
-                discoveredPort = 1
-                discoveredPort = melee.port_detector(gamestate, melee.Character.FALCO, 0)
-                if gamestate.players[discoveredPort].action_frame == 1:
-                    if gamestate.players[discoveredPort].action == self.live_move_dict.get(live_selected_move):
-                        print("adding to selected move count")
-                        self.selected_move_consecutive_use_count += 1
-                        print(self.selected_move_consecutive_use_count)
-                    else:
-                        if (gamestate.players[discoveredPort].action in self.live_attack_list):
-                            if(self.live_move_dict.get(live_selected_move) == melee.enums.Action.THROW_DOWN or self.live_move_dict.get(live_selected_move) == melee.enums.Action.THROW_UP):
-                                if(gamestate.players[discoveredPort].action == melee.enums.Action.GRAB):
-                                    pass
-                                else:
-                                    print("reset")
-                                    self.selected_move_consecutive_use_count = 0
-                            else:
-                                print("reset")
-                                self.selected_move_consecutive_use_count = 0
-
-                if self.selected_move_consecutive_use_count >= int(max_consecutive_selected_move_uses):
-                    print("max move consecutive use triggered")
-                    self.selected_move_consecutive_use_count = 0
-                    # if (live_response == "Sound"):
-                        # print("sound")
-
-
-        # self.iconphoto(r"rescources/images/SlippiSpamStopperPNGIcon.ico")
-        # self.watchdog = None
-        # self.watch_path = replays_directory
-
-        # self.start_watchdog()
-
-        watchdog_label = customtkinter.CTkLabel(text="Waiting for file creation", master=self)
-        watchdog_label.place(x=10, y=150)
-
-    def log(self, message):
-        print(message)
-
-    def start_watchdog(self):
-        if self.watchdog is None:
-            self.watchdog = Watchdog(path=self.watch_path, logfunc=self.log)
-            self.watchdog.start()
-            self.log('Watchdog Started')
-
 
 class SSSTabView(customtkinter.CTkTabview):
 
@@ -265,6 +49,8 @@ class SSSTabView(customtkinter.CTkTabview):
 
         # Move Drop Down / Option Menu
         self.move_optionmenu_var = customtkinter.StringVar(value="DTHROW")
+        global live_selected_move
+        live_selected_move = "DTHROW"
 
         def move_optionmenu_callback(choice):
             global live_selected_move
@@ -337,16 +123,165 @@ class SSSTabView(customtkinter.CTkTabview):
         self.live_started_toplevel_window = None
 
         def live_started():
+            self.live_start_button.configure(state='disabled')
 
-            if self.live_started_toplevel_window is None or not self.live_started_toplevel_window.winfo_exists():
-                self.live_started_toplevel_window = LiveStartedToplevelWindow(self.winfo_toplevel())
-                self.live_started_toplevel_window.grab_set()
-            else:
-                self.live_started_toplevel_window.focus()
+            # lib melee first test
+            # setting up lib melee dict
+            self.live_move_dict = {
+                "DTHROW": melee.enums.Action.THROW_DOWN,
+                "UTHROW": melee.enums.Action.THROW_UP,
+                "NEUTRAL_B": melee.enums.Action.NEUTRAL_B_ATTACKING,
+                "UTILT": melee.enums.Action.UPTILT
+            }
+
+            # setting up array of all attacks to know when to reset attack count
+            self.live_attack_list = [
+                melee.enums.Action.BAIR,
+                melee.enums.Action.DAIR,
+                melee.enums.Action.DASH_ATTACK,
+                melee.enums.Action.DOWNSMASH,
+                melee.enums.Action.DOWNTILT,
+                melee.enums.Action.DOWN_B_AIR,
+                melee.enums.Action.DOWN_B_GROUND,
+                melee.enums.Action.DOWN_B_GROUND_START,
+                melee.enums.Action.DK_GROUND_POUND,
+                melee.enums.Action.FAIR,
+                melee.enums.Action.FIREFOX_AIR,
+                melee.enums.Action.FIREFOX_GROUND,
+                melee.enums.Action.FIREFOX_WAIT_AIR,
+                melee.enums.Action.FIREFOX_WAIT_GROUND,
+                melee.enums.Action.FOX_ILLUSION,
+                melee.enums.Action.FOX_ILLUSION_SHORTENED,
+                melee.enums.Action.FOX_ILLUSION_START,
+                melee.enums.Action.FSMASH_HIGH,
+                melee.enums.Action.FSMASH_LOW,
+                melee.enums.Action.FSMASH_MID,
+                melee.enums.Action.FSMASH_MID_HIGH,
+                melee.enums.Action.FSMASH_MID_LOW,
+                melee.enums.Action.FTILT_HIGH,
+                melee.enums.Action.FTILT_HIGH_MID,
+                melee.enums.Action.FTILT_LOW,
+                melee.enums.Action.FTILT_LOW_MID,
+                melee.enums.Action.FTILT_MID,
+                melee.enums.Action.GRAB,
+                melee.enums.Action.GUN_SHOOT,
+                melee.enums.Action.GUN_SHOOT_AIR,
+                melee.enums.Action.LASER_GUN_PULL,
+                melee.enums.Action.LOOPING_ATTACK_START,
+                melee.enums.Action.LOOPING_ATTACK_MIDDLE,
+                melee.enums.Action.MARTH_COUNTER,
+                melee.enums.Action.MARTH_COUNTER_FALLING,
+                melee.enums.Action.NAIR,
+                melee.enums.Action.NESS_SHEILD,
+                melee.enums.Action.NESS_SHEILD_AIR,
+                melee.enums.Action.NESS_SHEILD_START,
+                melee.enums.Action.NEUTRAL_ATTACK_1,
+                melee.enums.Action.NEUTRAL_ATTACK_2,
+                melee.enums.Action.NEUTRAL_ATTACK_3,
+                melee.enums.Action.NEUTRAL_B_ATTACKING,
+                melee.enums.Action.NEUTRAL_B_ATTACKING_AIR,
+                melee.enums.Action.NEUTRAL_B_CHARGING,
+                melee.enums.Action.NEUTRAL_B_CHARGING_AIR,
+                melee.enums.Action.NEUTRAL_B_FULL_CHARGE,
+                melee.enums.Action.NEUTRAL_B_FULL_CHARGE_AIR,
+                melee.enums.Action.SWORD_DANCE_1,
+                melee.enums.Action.SWORD_DANCE_1_AIR,
+                melee.enums.Action.SWORD_DANCE_2_HIGH,
+                melee.enums.Action.SWORD_DANCE_2_HIGH_AIR,
+                melee.enums.Action.SWORD_DANCE_2_MID,
+                melee.enums.Action.SWORD_DANCE_2_MID_AIR,
+                melee.enums.Action.SWORD_DANCE_3_HIGH,
+                melee.enums.Action.SWORD_DANCE_3_HIGH_AIR,
+                melee.enums.Action.SWORD_DANCE_3_LOW,
+                melee.enums.Action.SWORD_DANCE_3_LOW_AIR,
+                melee.enums.Action.SWORD_DANCE_3_MID,
+                melee.enums.Action.SWORD_DANCE_3_MID_AIR,
+                melee.enums.Action.SWORD_DANCE_4_HIGH,
+                melee.enums.Action.SWORD_DANCE_4_HIGH_AIR,
+                melee.enums.Action.SWORD_DANCE_4_LOW,
+                melee.enums.Action.SWORD_DANCE_4_LOW_AIR,
+                melee.enums.Action.SWORD_DANCE_4_MID,
+                melee.enums.Action.SWORD_DANCE_4_MID_AIR,
+                melee.enums.Action.THROW_BACK,
+                melee.enums.Action.THROW_DOWN,
+                melee.enums.Action.THROW_FORWARD,
+                melee.enums.Action.THROW_UP,
+                melee.enums.Action.UAIR,
+                melee.enums.Action.UPSMASH,
+                melee.enums.Action.UPTILT,
+                melee.enums.Action.UP_B_AIR,
+                melee.enums.Action.UP_B_GROUND
+            ]
+
+            # console creation
+            console = melee.Console(path="C:\\Users\\irp26\\AppData\\Roaming\\Slippi Launcher\\netplay",
+                                    logger=None)
+
+            # controllers setup
+            controller_player = melee.Controller(console=console,
+                                                 port=1,
+                                                 type=melee.ControllerType.GCN_ADAPTER)
+
+            controller_opponent = melee.Controller(console=console,
+                                                   port=2,
+                                                   type=melee.ControllerType.GCN_ADAPTER)
+
+            # running the console / opening dolphin
+            console.run("D:\\Game Downloads\\Roms\\GC\\asdf\\SSBMv102.iso")
+
+            # Connect to the console
+            print("Connecting to console...")
+            if not console.connect():
+                print("ERROR: Failed to connect to the console.")
+                sys.exit(-1)
+            print("Console connected")
+
+            print("Connecting controller to console...")
+            if not controller_player.connect():
+                print("ERROR: Failed to connect the controller.")
+                sys.exit(-1)
+            print("Controller connected")
+
+            # gameplay movechecking loop
+            global live_selected_move
+            self.selected_move_consecutive_use_count = 0
+
+            while True:
+                gamestate = console.step()
+                # step() returns None when the file ends
+                if gamestate is None:
+                    continue
+                if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
+                    discoveredPort = 1
+                    discoveredPort = melee.port_detector(gamestate, melee.Character.FALCO, 0)
+                    if gamestate.players[discoveredPort].action_frame == 1:
+                        if gamestate.players[discoveredPort].action == self.live_move_dict.get(live_selected_move):
+                            print("adding to selected move count    ")
+                            self.selected_move_consecutive_use_count += 1
+                            print(self.selected_move_consecutive_use_count)
+                        else:
+                            if (gamestate.players[discoveredPort].action in self.live_attack_list):
+                                if (self.live_move_dict.get(
+                                        live_selected_move) == melee.enums.Action.THROW_DOWN or self.live_move_dict.get(
+                                        live_selected_move) == melee.enums.Action.THROW_UP):
+                                    if (gamestate.players[discoveredPort].action == melee.enums.Action.GRAB):
+                                        pass
+                                    else:
+                                        print("reset")
+                                        self.selected_move_consecutive_use_count = 0
+                                else:
+                                    print("reset")
+                                    self.selected_move_consecutive_use_count = 0
+
+                    if self.selected_move_consecutive_use_count >= int(max_consecutive_selected_move_uses):
+                        print("max move consecutive use triggered")
+                        self.selected_move_consecutive_use_count = 0
+                        # if (live_response == "Sound"):
+                        # print("sound")
 
         # Past Games Analysis
         ##########################
-
+        
         # Setting up other attack array
         self.other_attacks_list = [
             slippi.id.ActionState.ATTACK_11,
@@ -508,6 +443,7 @@ class SSSTabView(customtkinter.CTkTabview):
         self.darkmode_switch.place(x=20,
                                    y=50)
 
+        # Replays folder path
         self.folder_path_label = customtkinter.CTkLabel(text="Folder Path Will Display Here",
                                                         master=self.tab("Settings"))
         self.folder_path_label.place(x=20, y=170)
@@ -529,6 +465,23 @@ class SSSTabView(customtkinter.CTkTabview):
                                                             text='Select Folder',
                                                             command=lambda: folder_select_button_event())
         self.folder_select_button.place(x=110, y=120)
+
+        # Slippi netplay folder selection
+
+        self.netplay_folder_path_label = customtkinter.CTkLabel(text="Netplay folder path will display here",
+                                                           master=self.tab("Settings"))
+        self.netplay_folder_path_label.place(x=20, y=190)
+
+        self.netplay_folder_label = customtkinter.CTkLabel(text="Netplay Folder:", master=self.tab("Settings"))
+        self.netplay_folder_label.place(x=20, y=140)
+
+        # Credits button
+        def open_credits_window_button_event():
+            pass
+
+        self.open_credits_window_button = customtkinter.CTkButton(master=self.tab("Settings"),
+                                                                  text='Credits',
+                                                                  command=lambda: open_credits_window_button_event())
 
 
 class App(customtkinter.CTk):
