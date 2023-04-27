@@ -26,6 +26,8 @@ global replays_directory
 global live_selected_move
 global max_consecutive_selected_move_uses
 global live_response
+global netplay_directory
+global ISO_path
 
 class SSSTabView(customtkinter.CTkTabview):
 
@@ -107,7 +109,6 @@ class SSSTabView(customtkinter.CTkTabview):
         # Start Button
         def live_start_button_event():
             global replays_directory
-            replays_directory = "C:\\Users\\test\\Documents\\Slippi"
             print(replays_directory)
             if replays_directory == "":
                 tkinter.messagebox.showerror('Replays Directory Not Set!',
@@ -379,7 +380,11 @@ class SSSTabView(customtkinter.CTkTabview):
                     break
 
                 print(f)
-                game = Game(f)
+                try:
+                    game = Game(f)
+                except:
+                    print("Skipped a file due to corrupted or missing data, probably EOF. File skipped: {}".format(f))
+                    continue
                 self.total_games_frames = self.total_games_frames + len(game.frames)
                 for frame in game.frames:
                     if self.selected_calculation_setting == "Moves":
@@ -441,15 +446,15 @@ class SSSTabView(customtkinter.CTkTabview):
                                                        onvalue="on",
                                                        offvalue="off")
         self.darkmode_switch.place(x=20,
-                                   y=50)
+                                   y=30)
 
         # Replays folder path
         self.folder_path_label = customtkinter.CTkLabel(text="Folder Path Will Display Here",
                                                         master=self.tab("Settings"))
-        self.folder_path_label.place(x=20, y=170)
+        self.folder_path_label.place(x=20, y=110)
 
         self.folder_label = customtkinter.CTkLabel(text="Replay Folder:", master=self.tab("Settings"))
-        self.folder_label.place(x=20, y=120)
+        self.folder_label.place(x=20, y=80)
 
         def folder_select_button_event():
             global replays_directory
@@ -464,16 +469,56 @@ class SSSTabView(customtkinter.CTkTabview):
         self.folder_select_button = customtkinter.CTkButton(master=self.tab("Settings"),
                                                             text='Select Folder',
                                                             command=lambda: folder_select_button_event())
-        self.folder_select_button.place(x=110, y=120)
+        self.folder_select_button.place(x=110, y=80)
 
         # Slippi netplay folder selection
 
         self.netplay_folder_path_label = customtkinter.CTkLabel(text="Netplay folder path will display here",
                                                            master=self.tab("Settings"))
-        self.netplay_folder_path_label.place(x=20, y=190)
+        self.netplay_folder_path_label.place(x=20, y=180)
 
         self.netplay_folder_label = customtkinter.CTkLabel(text="Netplay Folder:", master=self.tab("Settings"))
-        self.netplay_folder_label.place(x=20, y=140)
+        self.netplay_folder_label.place(x=20, y=150)
+
+        def netplay_folder_select_button_event():
+            global netplay_directory
+            netplay_directory = tkinter.filedialog.askdirectory(initialdir='C:\\',
+                                                                title='Select Your Dolphin Netplay Directory',
+                                                                )
+            if len(str(netplay_directory)) > 40:
+                self.netplay_folder_path_label.configure(text=(str(netplay_directory)[0:41] + "..."))
+            else:
+                self.netplay_folder_path_label.configure(text=str(netplay_directory))
+
+        self.netplay_folder_select_button = customtkinter.CTkButton(master=self.tab("Settings"),
+                                                            text='Select Netplay Folder',
+                                                            command=lambda: netplay_folder_select_button_event())
+        self.netplay_folder_select_button.place(x=110, y=150)
+
+        # ISO path
+        self.ISO_path_label = customtkinter.CTkLabel(text="ISO Path Will Display Here",
+                                                        master=self.tab("Settings"))
+        self.ISO_path_label.place(x=20, y=250)
+
+        self.ISO_label = customtkinter.CTkLabel(text="ISO File:", master=self.tab("Settings"))
+        self.ISO_label.place(x=20, y=220)
+
+        def ISO_select_button_event():
+            global ISO_path
+            ISO_path = tkinter.filedialog.askopenfilename(initialdir='C:\\',
+                                                          filetypes=(("ISO files","*.iso"), ("All files","*.*")),
+                                                          title='Select Your ISO File',
+                                                        )
+            if len(str(ISO_path)) > 40:
+                self.ISO_path_label.configure(text=(str(ISO_path)[0:41] + "..."))
+            else:
+                self.ISO_path_label.configure(text=str(ISO_path))
+
+        self.ISO_select_button = customtkinter.CTkButton(master=self.tab("Settings"),
+                                                            text='Select ISO',
+                                                            command=lambda: ISO_select_button_event())
+        self.ISO_select_button.place(x=110, y=220)
+
 
         # Credits button
         def open_credits_window_button_event():
