@@ -1,6 +1,9 @@
 import os
 import time
 import tkinter
+
+import ttkwidgets.autocomplete
+from ttkwidgets.autocomplete import autocompletecombobox
 import customtkinter
 import sys
 import logging
@@ -40,7 +43,9 @@ class SSSTabView(customtkinter.CTkTabview):
         self.add("Settings")
 
         global replays_directory
-        replays_directory = ""
+        global netplay_directory
+        global ISO_path
+        replays_directory = netplay_directory = ISO_path = ""
 
         # Live Game Tab Setup
         ####################################
@@ -59,12 +64,12 @@ class SSSTabView(customtkinter.CTkTabview):
             print("move selected: ", choice)
             live_selected_move = choice
 
-        self.move_combobox = customtkinter.CTkOptionMenu(master=self.tab("Live Game"),
+        self.move_optionmenu = customtkinter.CTkOptionMenu(master=self.tab("Live Game"),
                                                          values=["DTHROW", "UTHROW", "NEUTRAL_B", "UTILT"],
                                                          command=move_optionmenu_callback,
                                                          variable=self.move_optionmenu_var)
 
-        self.move_combobox.grid(row=1, column=0)
+        self.move_optionmenu.grid(row=1, column=0)
 
         # Number times entry
 
@@ -99,20 +104,44 @@ class SSSTabView(customtkinter.CTkTabview):
             print("move selected: ", choice)
             live_response = choice
 
-        self.response_combobox = customtkinter.CTkOptionMenu(master=self.tab("Live Game"),
+        self.response_optionmenu= customtkinter.CTkOptionMenu(master=self.tab("Live Game"),
                                                              values=["Playing a Sound", "Using PySerial"],
                                                              command=response_optionmenu_callback,
                                                              variable=self.response_optionmenu_var)
 
-        self.response_combobox.grid(row=1, column=2, padx=50)
+        self.response_optionmenu.grid(row=1, column=2, padx=50)
+
+
+        # Character optionmenu
+        self.character_optionmenu_var = customtkinter.StringVar(value="Falco")
+
+        all_chacters = ["Falco", "Fox", "Marth", "Cpt Falco", "Sheik", "Peach", "Puff", "Yoshi", "Dr Mario", "Mario", "Luigi", "Bowser",
+                        "DK", "Ganondorf", "Ness", "Ice Climbers", "Kirby", "Samus", "Zelda", "Link", "Young Link",
+                        "Pichu", "Pikachu", "Mewtwo", "G&W", "Roy"]
+
+        def character_optionmenu_callback(choice):
+            global character
+            print("chachter selected: ", choice)
+            character=choice
+
+        self.character_optionmenu = customtkinter.CTkOptionMenu(master=self.tab("Live Game"),
+                                                            values=all_chacters,
+                                                            command=character_optionmenu_callback,
+                                                            variable=self.character_optionmenu_var)
+
+        self.character_optionmenu.grid(row=3, column=2, padx=50)
 
         # Start Button
         def live_start_button_event():
+            print(self.character_optionmenu_var.get())
             global replays_directory
+            global netplay_directory
+            global ISO_path
             print(replays_directory)
-            if replays_directory == "":
-                tkinter.messagebox.showerror('Replays Directory Not Set!',
-                                             'Please set your replays directory in the settings tab!')
+            if netplay_directory == "" or ISO_path == "":
+                tkinter.messagebox.showerror('Relevant Directories Not Set!',
+                                             'Please set your netplay directory and the path to '
+                                             'your ISO in the settings tab!')
             else:
                 live_started()
 
@@ -215,8 +244,14 @@ class SSSTabView(customtkinter.CTkTabview):
             ]
 
             # console creation
-            console = melee.Console(path="C:\\Users\\irp26\\AppData\\Roaming\\Slippi Launcher\\netplay",
-                                    logger=None)
+            try:
+                console = melee.Console(path="C:\\Users\\irp26\\AppData\\Roaming\\Slippi Launcher\\netplay",
+                                        logger=None)
+            except FileNotFoundError:
+                tkinter.messagebox.showerror('Error starting dolphin!',
+                                             'Could not find important files to launch dolphin! Please check that your netplay directory is properly set!')
+                self.live_start_button.configure(state='enabled')
+
 
             # controllers setup
             controller_player = melee.Controller(console=console,
@@ -351,12 +386,12 @@ class SSSTabView(customtkinter.CTkTabview):
             print("move selected: ", choice)
             self.selected_move = self.past_move_dict[self.past_move_optionmenu_var.get()]
 
-        self.past_move_combobox = customtkinter.CTkOptionMenu(master=self.tab("Past Games"),
+        self.past_move_optionmenu = customtkinter.CTkOptionMenu(master=self.tab("Past Games"),
                                                               values=["DTHROW", "UTHROW", "NEUTRAL_B", "UTILT"],
                                                               command=past_move_optionmenu_callback,
                                                               variable=self.past_move_optionmenu_var)
 
-        self.past_move_combobox.place(x=500,
+        self.past_move_optionmenu.place(x=500,
                                       y=130)
         # Watch For Label
         self.past_watch_for_label = customtkinter.CTkLabel(text="Watch For", master=self.tab("Past Games"))
