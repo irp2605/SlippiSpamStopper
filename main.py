@@ -11,6 +11,8 @@ import config
 import slippi.event
 from tkinter import filedialog
 from tkinter import messagebox
+from tkinter import font
+from tkinter import Label
 import pip
 import melee
 # from playsound import playsound
@@ -18,6 +20,7 @@ import melee
 from slippi.parse import parse
 from slippi.parse import ParseEvent
 from slippi.game import Game
+import webbrowser
 
 customtkinter.set_appearance_mode("dark")
 customtkinter.set_default_color_theme("blue")
@@ -32,6 +35,9 @@ global live_response
 global netplay_directory
 global ISO_path
 
+global character
+global costume
+
 class SSSTabView(customtkinter.CTkTabview):
 
     def __init__(self, master, **kwargs):
@@ -41,6 +47,7 @@ class SSSTabView(customtkinter.CTkTabview):
         self.add("Live Game")
         self.add("Past Games")
         self.add("Settings")
+        self.set("Settings")
 
         global replays_directory
         global netplay_directory
@@ -68,7 +75,7 @@ class SSSTabView(customtkinter.CTkTabview):
                                                          values=["DTHROW", "UTHROW", "NEUTRAL_B", "UTILT"],
                                                          command=move_optionmenu_callback,
                                                          variable=self.move_optionmenu_var)
-
+    
         self.move_optionmenu.grid(row=1, column=0)
 
         # Number times entry
@@ -94,7 +101,7 @@ class SSSTabView(customtkinter.CTkTabview):
 
         # Respond by Label
         self.watch_for_label = customtkinter.CTkLabel(text="Respond By", master=self.tab("Live Game"))
-        self.watch_for_label.grid(row=2, column=1, padx=60, pady=(0, 40))
+        self.watch_for_label.grid(row=1, column=1, padx=60, pady=(10,20))
 
         # Response Option
         self.response_optionmenu_var = customtkinter.StringVar(value="Playing a Sound")
@@ -112,16 +119,20 @@ class SSSTabView(customtkinter.CTkTabview):
         self.response_optionmenu.grid(row=1, column=2, padx=50)
 
 
+        #char costume label
+        self.watch_for_label = customtkinter.CTkLabel(text="Char and Costume (0=neutral, 1-3=alts)", master=self.tab("Live Game"))
+        self.watch_for_label.grid(row=2, column=1)
+
         # Character optionmenu
         self.character_optionmenu_var = customtkinter.StringVar(value="Falco")
 
-        all_chacters = ["Falco", "Fox", "Marth", "Cpt Falco", "Sheik", "Peach", "Puff", "Yoshi", "Dr Mario", "Mario", "Luigi", "Bowser",
+        all_chacters = ["Falco", "Fox", "Marth", "Cpt Falcon", "Sheik", "Peach", "Puff", "Yoshi", "Dr Mario", "Mario", "Luigi", "Bowser",
                         "DK", "Ganondorf", "Ness", "Ice Climbers", "Kirby", "Samus", "Zelda", "Link", "Young Link",
                         "Pichu", "Pikachu", "Mewtwo", "G&W", "Roy"]
 
         def character_optionmenu_callback(choice):
             global character
-            print("chachter selected: ", choice)
+            print("character selected: ", choice)
             character=choice
 
         self.character_optionmenu = customtkinter.CTkOptionMenu(master=self.tab("Live Game"),
@@ -129,7 +140,24 @@ class SSSTabView(customtkinter.CTkTabview):
                                                             command=character_optionmenu_callback,
                                                             variable=self.character_optionmenu_var)
 
-        self.character_optionmenu.grid(row=3, column=2, padx=50)
+        self.character_optionmenu.grid(row=3, column=1)
+
+        # Costume optionmenu
+        self.costume_optionmenu_var = customtkinter.StringVar(value='0')
+
+        all_costume_indexes = ['0', '1', '2', '3']
+
+        def costume_optionmenu_callback(choice):
+            global costume
+            print("costume selected: ", choice)
+            costume = choice
+
+        self.costume_optionmenu = customtkinter.CTkOptionMenu(master=self.tab("Live Game"),
+                                                                values=all_costume_indexes,
+                                                                command=costume_optionmenu_callback,
+                                                                variable=self.costume_optionmenu_var)
+
+        self.costume_optionmenu.grid(row=4, column=1)
 
         # Start Button
         def live_start_button_event():
@@ -244,76 +272,78 @@ class SSSTabView(customtkinter.CTkTabview):
             ]
 
             # console creation
+            console = None
             try:
-                console = melee.Console(path="C:\\Users\\irp26\\AppData\\Roaming\\Slippi Launcher\\netplay",
+                console = melee.Console(path=netplay_directory,
                                         logger=None)
             except FileNotFoundError:
                 tkinter.messagebox.showerror('Error starting dolphin!',
                                              'Could not find important files to launch dolphin! Please check that your netplay directory is properly set!')
                 self.live_start_button.configure(state='enabled')
 
+            if console is not None:
+                # controllers setup
+                controller_player = melee.Controller(console=console,
+                                                     port=1,
+                                                     type=melee.ControllerType.GCN_ADAPTER)
 
-            # controllers setup
-            controller_player = melee.Controller(console=console,
-                                                 port=1,
-                                                 type=melee.ControllerType.GCN_ADAPTER)
+                controller_opponent = melee.Controller(console=console,
+                                                       port=2,
+                                                       type=melee.ControllerType.GCN_ADAPTER)
 
-            controller_opponent = melee.Controller(console=console,
-                                                   port=2,
-                                                   type=melee.ControllerType.GCN_ADAPTER)
+                # running the console / opening dolphin
+                console.run(ISO_path)
 
-            # running the console / opening dolphin
-            console.run("D:\\Game Downloads\\Roms\\GC\\asdf\\SSBMv102.iso")
+                # Connect to the console
+                print("Connecting to console...")
+                if not console.connect():
+                    print("ERROR: Failed to connect to the console.")
+                    sys.exit(-1)
+                print("Console connected")
 
-            # Connect to the console
-            print("Connecting to console...")
-            if not console.connect():
-                print("ERROR: Failed to connect to the console.")
-                sys.exit(-1)
-            print("Console connected")
+                print("Connecting controller to console...")
+                if not controller_player.connect():
+                    print("ERROR: Failed to connect the controller.")
+                    sys.exit(-1)
+                print("Controller connected")
 
-            print("Connecting controller to console...")
-            if not controller_player.connect():
-                print("ERROR: Failed to connect the controller.")
-                sys.exit(-1)
-            print("Controller connected")
+                # gameplay movechecking loop
+                global live_selected_move
+                self.selected_move_consecutive_use_count = 0
 
-            # gameplay movechecking loop
-            global live_selected_move
-            self.selected_move_consecutive_use_count = 0
-
-            while True:
-                gamestate = console.step()
-                # step() returns None when the file ends
-                if gamestate is None:
-                    continue
-                if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
-                    discoveredPort = 1
-                    discoveredPort = melee.port_detector(gamestate, melee.Character.FALCO, 0)
-                    if gamestate.players[discoveredPort].action_frame == 1:
-                        if gamestate.players[discoveredPort].action == self.live_move_dict.get(live_selected_move):
-                            print("adding to selected move count    ")
-                            self.selected_move_consecutive_use_count += 1
-                            print(self.selected_move_consecutive_use_count)
-                        else:
-                            if (gamestate.players[discoveredPort].action in self.live_attack_list):
-                                if (self.live_move_dict.get(
-                                        live_selected_move) == melee.enums.Action.THROW_DOWN or self.live_move_dict.get(
+                while True:
+                    gamestate = console.step()
+                    # step() returns None when the file ends
+                    if gamestate is None:
+                        continue
+                    if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
+                        discoveredPort = 1
+                        discoveredPort = melee.port_detector(gamestate, melee.Character.FALCO, 0)
+                        if gamestate.players[discoveredPort].action_frame == 1:
+                            if gamestate.players[discoveredPort].action == self.live_move_dict.get(live_selected_move):
+                                print("adding to selected move count    ")
+                                self.selected_move_consecutive_use_count += 1
+                                print(self.selected_move_consecutive_use_count)
+                            else:
+                                if (gamestate.players[discoveredPort].action in self.live_attack_list):
+                                    if (self.live_move_dict.get(
+                                            live_selected_move) == melee.enums.Action.THROW_DOWN or self.live_move_dict.get(
                                         live_selected_move) == melee.enums.Action.THROW_UP):
-                                    if (gamestate.players[discoveredPort].action == melee.enums.Action.GRAB):
-                                        pass
+                                        if (gamestate.players[discoveredPort].action == melee.enums.Action.GRAB):
+                                            pass
+                                        else:
+                                            print("reset")
+                                            self.selected_move_consecutive_use_count = 0
                                     else:
                                         print("reset")
                                         self.selected_move_consecutive_use_count = 0
-                                else:
-                                    print("reset")
-                                    self.selected_move_consecutive_use_count = 0
 
-                    if self.selected_move_consecutive_use_count >= int(max_consecutive_selected_move_uses):
-                        print("max move consecutive use triggered")
-                        self.selected_move_consecutive_use_count = 0
-                        # if (live_response == "Sound"):
-                        # print("sound")
+                        if self.selected_move_consecutive_use_count >= int(max_consecutive_selected_move_uses):
+                            print("max move consecutive use triggered")
+                            self.selected_move_consecutive_use_count = 0
+                            # if (live_response == "Sound"):
+                            # print("sound")
+
 
         # Past Games Analysis
         ##########################
@@ -361,7 +391,7 @@ class SSSTabView(customtkinter.CTkTabview):
         # Calculation settings
         self.past_calculation_setting_label = customtkinter.CTkLabel(text="Calculate based on:",
                                                                      master=self.tab("Past Games"))
-        self.past_calculation_setting_label.place(x=130,
+        self.past_calculation_setting_label.place(x=65,
                                                   y=145)
         # Calculation option menu
         self.past_calculation_setting_optionmenu_var = customtkinter.StringVar(value="Moves")
@@ -375,7 +405,7 @@ class SSSTabView(customtkinter.CTkTabview):
                                                                                values=["Moves", "Frames"],
                                                                                command=past_calculation_setting_optionmenu_callback,
                                                                                variable=self.past_calculation_setting_optionmenu_var)
-        self.past_calculation_setting_optionmenu.place(x=120,
+        self.past_calculation_setting_optionmenu.place(x=50,
                                                        y=180)
 
         # Move Drop Down / Option Menu
@@ -556,12 +586,56 @@ class SSSTabView(customtkinter.CTkTabview):
 
 
         # Credits button
+
+        self.toplevel_window = None
+        class CreditsToplevelwindow(customtkinter.CTkToplevel):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.geometry("300x300")
+                self.resizable(height=None,width=None)
+                self.title("Credits")
+                self.grab_set()
+
+                def link_callback(url):
+                    webbrowser.open_new_tab(url)
+
+                # credits label
+                hvbold_underline = tkinter.font.Font(family='Helvetica', weight='bold', size=20, underline=1)
+                credits_label = tkinter.Label(master = self, text = "Credits", font = hvbold_underline, fg="#dce4ee", bg="#242424")
+                credits_label.place(x=10, y=20)
+
+                # custom tkinter
+                custom_tkinter_link = tkinter.Label(master = self, text="- CustomTkinter by TomSchimansky", font=('Helveticabold underline', 10), fg="blue", bg="#242424", cursor="hand2")
+                custom_tkinter_link.bind("<Button-1>", lambda e:
+                                         link_callback("https://github.com/TomSchimansky/CustomTkinter"))
+                custom_tkinter_link.place(x=10, y=70)
+
+                # libmelee
+                libmelee_link = tkinter.Label(master=self, text="- libmelee by altf4",
+                                                    font=('Helveticabold', 10), fg="blue", bg="#242424", cursor="hand2")
+                libmelee_link.bind("<Button-1>", lambda e:
+                                    link_callback("https://github.com/altf4/libmelee"))
+                libmelee_link.place(x=10, y=100)
+
+                # py-slippi
+                py_slippi_link = tkinter.Label(master=self, text="- py-slippi by hohav",
+                                              font=('Helveticabold', 10), fg="blue", bg="#242424", cursor="hand2")
+                py_slippi_link.bind("<Button-1>", lambda e:
+                                     link_callback("https://github.com/hohav/py-slippi"))
+                py_slippi_link.place(x=10, y=130)
+
+
         def open_credits_window_button_event():
-            pass
+            if self.toplevel_window is None or not self.toplevel_window.winfo_exists():
+                self.toplevel_window = CreditsToplevelwindow(self)
+            else:
+                self.toplevel_window.focus()
 
         self.open_credits_window_button = customtkinter.CTkButton(master=self.tab("Settings"),
                                                                   text='Credits',
                                                                   command=lambda: open_credits_window_button_event())
+
+        self.open_credits_window_button.place(x=500, y=150)
 
 
 class App(customtkinter.CTk):
